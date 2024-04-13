@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Form, UploadFile, File
 from fastapi import HTTPException, status
+import datetime
 
 import os
 import shutil
@@ -59,10 +60,55 @@ def transcribe(audio_path: str, whisper_model: str, **whisper_args):
 
     return transcript
 
+def transcribe_yue(audio_path: str, whisper_model: str, **whisper_args):
+    """Transcribe the audio file using whisper"""
+
+    # Get whisper model
+    # NOTE: If mulitple models are selected, this may keep all of them in memory depending on the cache size
+    transcriber = get_whisper_model(whisper_model)
+
+    # Set configs & transcribe
+    if whisper_args["temperature_increment_on_fallback"] is not None:
+        whisper_args["temperature"] = tuple(
+            np.arange(whisper_args["temperature"], 1.0 + 1e-6, whisper_args["temperature_increment_on_fallback"])
+        )
+    else:
+        whisper_args["temperature"] = [whisper_args["temperature"]]
+
+    del whisper_args["temperature_increment_on_fallback"]
+
+    audio = whisper.load_audio(audio_path)
+    audio = whisper.pad_or_trim(audio)
+    mel = whisper.log_mel_spectrogram(audio, n_mels=128).to(transcriber.device)
+    _, probs = transcriber.detect_language(mel)
+    print("\n\n")
+    print(f"Time: {datetime.datetime.now()}")
+    print(f"First detected language: {max(probs, key=probs.get)}")
+    print(f"en:  {round(probs['en'], 6)}")
+    print(f"zh:  {round(probs['zh'], 6)}")
+    print(f"yue: {round(probs['yue'], 6)}")
+    if probs["yue"] > 0.001:
+        whisper_args["language"] = "yue"
+        print(f"Final detected language: yue")
+    elif probs["yue"] <= 0.001 and max(probs, key=probs.get) == 'zh':
+        whisper_args["language"] = "zh"
+        whisper_args["initial_prompt"] = "以下是普通话的句子"
+        print(f"Final detected language: zh")
+    else:
+        print(f"Final detected language: {max(probs, key=probs.get)}")
+
+    transcript = transcriber.transcribe(
+        audio_path,
+        **whisper_args,
+    )
+    print(f"Result: '''\n{transcript['text']}\n'''")
+
+    return transcript
+
 
 WHISPER_DEFAULT_SETTINGS = {
 #    "whisper_model": "base",
-    "whisper_model": "large-v2",
+    "whisper_model": "large-v3",
     "temperature": 0.0,
     "temperature_increment_on_fallback": 0.2,
     "no_speech_threshold": 0.6,
@@ -75,7 +121,7 @@ WHISPER_DEFAULT_SETTINGS = {
 #    "task": "translation",
 }
 
-UPLOAD_DIR="/tmp"
+UPLOAD_DIR="./tmp/whisper/"
 # -----
 
 @app.post('/v1/audio/transcriptions')
@@ -118,7 +164,7 @@ async def transcriptions(model: str = Form(...),
     shutil.copyfileobj(fileobj, upload_file)
     upload_file.close()
 
-    transcript = transcribe(audio_path=upload_name, **WHISPER_DEFAULT_SETTINGS)
+    transcript = transcribe_yue(audio_path=upload_name, **WHISPER_DEFAULT_SETTINGS)
 
 
     if response_format in ['text']:
