@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Form, UploadFile, File
 from fastapi import HTTPException, status
 import datetime
+import time
 
 import os
 import shutil
@@ -77,6 +78,7 @@ def transcribe_yue(audio_path: str, whisper_model: str, **whisper_args):
 
     del whisper_args["temperature_increment_on_fallback"]
 
+    start_time = time.time()
     audio = whisper.load_audio(audio_path)
     audio = whisper.pad_or_trim(audio)
     mel = whisper.log_mel_spectrogram(audio, n_mels=128).to(transcriber.device)
@@ -101,6 +103,8 @@ def transcribe_yue(audio_path: str, whisper_model: str, **whisper_args):
         audio_path,
         **whisper_args,
     )
+    end_time = time.time()
+    print(f"Cost time: {end_time - start_time:.4f}s")
     print(f"Result: '''\n{transcript['text']}\n'''")
 
     return transcript
