@@ -2,6 +2,7 @@ from fastapi import FastAPI, Form, UploadFile, File
 from fastapi import HTTPException, status
 import datetime
 import time
+import uvicorn
 
 import os
 import shutil
@@ -125,7 +126,7 @@ WHISPER_DEFAULT_SETTINGS = {
 #    "task": "translation",
 }
 
-UPLOAD_DIR="./tmp/whisper/"
+UPLOAD_DIR="/tmp/whisper/"
 # -----
 
 @app.post('/v1/audio/transcriptions')
@@ -209,3 +210,5 @@ async def transcriptions(model: str = Form(...),
 
     return {'text': transcript['text']}
 
+if __name__ == '__main__':
+    uvicorn.run(app, host="0.0.0.0", port=10087)
