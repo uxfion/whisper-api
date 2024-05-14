@@ -82,7 +82,8 @@ def transcribe_yue(audio_path: str, whisper_model: str, **whisper_args):
     start_time = time.time()
     audio = whisper.load_audio(audio_path)
     audio = whisper.pad_or_trim(audio)
-    mel = whisper.log_mel_spectrogram(audio, n_mels=128).to(transcriber.device)
+    # mel = whisper.log_mel_spectrogram(audio, n_mels=128).to(transcriber.device)  # v3 128
+    mel = whisper.log_mel_spectrogram(audio, n_mels=80).to(transcriber.device)
     _, probs = transcriber.detect_language(mel)
     print("\n\n")
     print(f"Time: {datetime.datetime.now()}")
@@ -112,8 +113,8 @@ def transcribe_yue(audio_path: str, whisper_model: str, **whisper_args):
 
 
 WHISPER_DEFAULT_SETTINGS = {
-#    "whisper_model": "base",
-    "whisper_model": "large-v3",
+   # "whisper_model": "base",
+    "whisper_model": "large-v2",
     "temperature": 0.0,
     "temperature_increment_on_fallback": 0.2,
     "no_speech_threshold": 0.6,
