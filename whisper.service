@@ -1,0 +1,14 @@
+[Unit]
+Description=Whisper Service
+After=network-online.target
+
+[Service]
+Environment="CUDA_VISIBLE_DEVICES=3"
+ExecStart=/root/anaconda3/envs/lecter-1/bin/python /root/Lecter/whisper-api/main.py
+User=root
+Group=root
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target
